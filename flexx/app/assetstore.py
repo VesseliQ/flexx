@@ -139,8 +139,13 @@ def create_css_and_js_from_model_classes(classes, css='', js=''):
         js.insert(0, HEADER)
     return '\n\n'.join(css) or '\n', '\n\n'.join(js) or '\n'
 
+# todo: def create_module(name, *args) -> args can be strings and classes
 
 # todo: what if we constrained the scope of flexx.app and above to browsers, e.g. no node? I wonder if this code would get simpler. Also clientcore et al. can assume the presence of the window object.
+
+# todo: can we also define modules for CSS assets so that we know which ones come first?
+
+# todo: to what extend should the asset manager be aware of JSModules?
 
 class AssetStore:
     """ Global provider of client assets (CSS, JavaScript, images, etc.).
@@ -262,6 +267,8 @@ class AssetStore:
         css_, js_ = create_css_and_js_from_model_classes(classes, css, js)
         
         # todo: selection of imports and exports should be done by caller ...
+        # -> this function should be create_module(), return a JSModel, and caller
+        #    should then do add_asset(name, mod.saves())
         from ..pyscript.stdlib import JSModule, FUNCTION_PREFIX, METHOD_PREFIX
         m = JSModule(module_name, js_, ['pyscript-std as py_'], [])
         js_ = m.saves()
@@ -398,6 +405,7 @@ class SessionAssets:
         else:
             self._asset_names.append(fname)
     
+    # todo: rename add_session_asset?
     def add_asset(self, fname, content, before=None):
         """ Add an asset specific for this session.
         
