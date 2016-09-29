@@ -84,10 +84,11 @@ from .funcs import init_notebook, serve, launch, export
 from .assetstore import assets
 from .clientcore import FlexxJS
 
-from ..pyscript.stdlib import get_full_std_lib as _get_full_std_lib
+from ..pyscript.stdlib import get_full_std_lib_module as _get_full_std_lib_module
 
 
 _JS_TEMPLATE = "%s\nvar flexx = new FlexxJS();"
 
-assets.add_asset('pyscript-std.js', _get_full_std_lib().encode())
+#assets.add_asset('pyscript-std.js', _get_full_std_lib().encode())
+assets.add_asset('pyscript-std.js', _get_full_std_lib_module().saves().encode())
 assets.create_module_assets('flexx.app', js=_JS_TEMPLATE % FlexxJS)

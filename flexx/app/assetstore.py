@@ -140,6 +140,8 @@ def create_css_and_js_from_model_classes(classes, css='', js=''):
     return '\n\n'.join(css) or '\n', '\n\n'.join(js) or '\n'
 
 
+# todo: what if we constrained the scope of flexx.app and above to browsers, e.g. no node? I wonder if this code would get simpler. Also clientcore et al. can assume the presence of the window object.
+
 class AssetStore:
     """ Global provider of client assets (CSS, JavaScript, images, etc.).
     
@@ -219,6 +221,11 @@ class AssetStore:
         if lookslikeafilename(content):
             return self._cache_get(content)
         else:
+            # 
+            # if fname.endswith('.js') and not fname.startswith('session-id'):  # better name, like init or main
+            #     MOD = b"flexx.define('%s', [], function() {\n\n%s\n\n});\n"
+            #     content = MOD % (fname.encode(), content)
+            
             return content
     
     def get_module_name_for_model_class(self, cls):
@@ -253,6 +260,12 @@ class AssetStore:
                     classes.append(cls)
         
         css_, js_ = create_css_and_js_from_model_classes(classes, css, js)
+        
+        # todo: selection of imports and exports should be done by caller ...
+        from ..pyscript.stdlib import JSModule, FUNCTION_PREFIX, METHOD_PREFIX
+        m = JSModule(module_name, js_, ['pyscript-std as py_'], [])
+        js_ = m.saves()
+        js_ = js_.replace(FUNCTION_PREFIX, 'py_.f_').replace(METHOD_PREFIX, 'py_.m_')
         
         # Store module name and sort
         self._module_names.append(module_name)
@@ -488,6 +501,12 @@ class SessionAssets:
         # Create assets from our extra model classes
         if self._extra_model_classes:
             css, js = create_css_and_js_from_model_classes(self._extra_model_classes)
+        
+            from ..pyscript.stdlib import JSModule, FUNCTION_PREFIX, METHOD_PREFIX
+            m = JSModule('extra-classes', js, ['pyscript-std as py_'], [])
+            js = m.saves()
+            js = js.replace(FUNCTION_PREFIX, 'py_.f_').replace(METHOD_PREFIX, 'py_.m_')
+        
             self.add_asset('index-extra-model-classes.css', css.encode())
             self.add_asset('index-extra-model-classes.js', js.encode())
         self._extra_model_classes = None  # make sure we wont append to it anymore :)
