@@ -316,9 +316,9 @@ class MainHandler(tornado.web.RequestHandler):
                     session.close()
                 else:
                     try:
-                        res = assets.load_asset(fname)
-                    except (IOError, IndexError):
-                        self.write('invalid resource: %s' % fname)
+                        res = assets.get_asset(fname).to_string().encode()
+                    except Exception as err:
+                        self.write('Could not load resource: %s\n%s' % (fname, str(err))
                         return
                 # Build HTML page
                 lines = ['<html><head><style>%s</style></head><body>' % 
@@ -337,9 +337,9 @@ class MainHandler(tornado.web.RequestHandler):
                 elif file_name.endswith('.js'):
                     self.set_header("Content-Type", 'application/x-javascript')
                 try:
-                    res = assets.load_asset(file_name)
-                except (IOError, IndexError):
-                    # self.write('Invalid resource %r' % file_name)
+                    res = assets.load_asset(file_name).to_string().decode()
+                except Exception as err:
+                    # self.write('Could not load resource: %s\n%s' % (fname, str(err))
                     super().write_error(404)
                 else:
                     self.write(res)

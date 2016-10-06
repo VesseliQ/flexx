@@ -267,7 +267,7 @@ class Session(SessionAssets):
         # Init assets (need that \n to make it look like code on py2
         t = 'var flexx = {app_name: "%s", session_id: "%s"};\n' % (app_name, self.id)
         t += MOD_BLA
-        self.add_asset('session-id.js', t.encode())
+        self.add_asset('session-id.js', t.encode())  # TODO: local assets!
         self.use_global_asset('pyscript-std.js')
         self.use_global_asset('flexx-app.js')
         
