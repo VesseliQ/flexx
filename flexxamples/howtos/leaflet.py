@@ -62,10 +62,11 @@ def _embed_css_resources(css, types=('.png',)):
     return css
 
 
+leaflet_src = 'leaflet-src.js' if 'LEAFLET_DEBUG' in os.environ else 'leaflet.js'
 flx.assets.associate_asset(
     __name__,
-    'leaflet.js',
-    lambda: _get_code('leaflet.js'),
+    leaflet_src,
+    lambda: _get_code(leaflet_src),
 )
 flx.assets.associate_asset(
     __name__,
