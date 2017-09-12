@@ -108,9 +108,9 @@ class LeafletWidget(flx.Widget):
     show_scale = flx.BoolProp(False, settable=True, doc="""
         Whether to show scale at bottom-left of map.
         """)
-
+    
     @flx.action
-    def add_layer(self, url, name=None):
+    def add_layer(self, url, name=None, attribution=None):
         """ Add a layer to the map.
         """
         # Avoid duplicates
@@ -118,7 +118,7 @@ class LeafletWidget(flx.Widget):
         if name:
             self.remove_layer(name)
         # Add layer
-        layers = self.layers + [(url, name or 'Layer')]
+        layers = self.layers + [(url, name or 'Layer', attribution or '')]
         self._mutate_layers(layers)
 
     @flx.action
@@ -222,12 +222,12 @@ class LeafletWidget(flx.Widget):
             self.layer_control.removeLayer(layer)
             if self.map.hasLayer(layer):
                 self.map.removeLayer(layer)
-        for layer_url, layer_name in self.layers:
+        for layer_url, layer_name, layer_attribution in self.layers:
             if not layer_url.endswith('.png'):
                 if not layer_url.endswith('/'):
                     layer_url += '/'
                 layer_url += '{z}/{x}/{y}.png'
-            new_layer = L.tileLayer(layer_url)
+            new_layer = L.tileLayer(layer_url, {'attribution': layer_attribution})
             self.layer_container.append(new_layer)
             self.map.addLayer(new_layer)
             self.layer_control.addOverlay(new_layer, layer_name)
