@@ -23,17 +23,16 @@ INDEX = """
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,user-scalable=no">
-    <title>Flexx UI</title>
+    <title>Starting...</title>
 </head>
 
 <body id='body'>
 
 <noscript> This Flexx application needs JavaScript to be turned on. </noscript>
-
 <div id='flexx-spinner' class='flx-spinner' style='position:fixed; top:0; bottom:0;
 left:0; right:0; background:#fff; color:#555; text-align:center; z-index:9999;
 word-break: break-all; padding:0.5em;'>
-<div>Starting Flexx app</div> <div style='font-size:50%; color:#66A;'></div>
+<div>Starting...</div> <div style='font-size:50%; color:#66A;'></div>
 </div>
 
 ASSET-HOOK
