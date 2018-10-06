@@ -23,7 +23,7 @@ INDEX = """
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,user-scalable=no">
-    <title>Starting...</title>
+    HEADER-HOOK
 </head>
 
 <body id='body'>

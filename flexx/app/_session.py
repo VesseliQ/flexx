@@ -795,7 +795,8 @@ def _get_page(session, js_assets, css_assets, link, export):
     codes.append('<script>flexx.create_session("%s", "%s");</script>\n' %
                  (session.app_name, session.id))
 
-    src = INDEX
+    headers = session.app.headers if hasattr(session.app, 'headers') else ''
+    src = INDEX.replace('HEADER-HOOK', headers) 
     if link in (0, 1):
         asset_names = [a.name for a in css_assets + js_assets]
         toc = '<!-- Contents:\n\n- ' + '\n- '.join(asset_names) + '\n\n-->'
