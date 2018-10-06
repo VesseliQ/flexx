@@ -293,7 +293,7 @@ class HVLayout(Layout):
         'left-to-right', 'right-to-left', 'top-to-bottom', 'bottom-to-top'
         (insensitive to case and use of dashes).
         """)
-
+    
     spacing = event.FloatProp(4, settable=True, doc="""
         The space between two child elements (in pixels).
         """)
@@ -402,46 +402,57 @@ class HVLayout(Layout):
         # look for min/max sizes of their children. We could set min-width and
         # friends at the layout to help flexbox a bit, but that would possibly
         # overwrite a user-set value. Hopefully flexbox will get fixed soon.
-
-        # Collect contributions of child widgets
+        
         hori = 'h' in self.orientation
+        
+        # Own limits
+        mima0 = super()._query_min_max_size()
+        
+        # Init limits for children
         if hori is True:
             mima1 = [0, 0, 0, 1e9]
-            for child in self.children:
-                mima2 = child._size_limits
-                mima1[0] += mima2[0]
-                mima1[1] += mima2[1]
-                mima1[2] = max(mima1[2], mima2[2])
-                mima1[3] = min(mima1[3], mima2[3])
         else:
             mima1 = [0, 1e9, 0, 0]
+        
+        # Collect contributions of child widgets?
+        if self.minsize_from_children:
             for child in self.children:
                 mima2 = child._size_limits
-                mima1[0] = max(mima1[0], mima2[0])
-                mima1[1] = min(mima1[1], mima2[1])
-                mima1[2] += mima2[2]
-                mima1[3] += mima2[3]
-
-        # Dont forget padding and spacing
-        extra_padding = self.padding * 2
-        extra_spacing = self.spacing * (len(self.children) - 1)
-        for i in range(4):
-            mima1[i] += extra_padding
-        if hori is True:
-            mima1[0] += extra_spacing
-            mima1[1] += extra_spacing
-        else:
-            mima1[2] += extra_spacing
-            mima1[3] += extra_spacing
-
-        # Own limits
-        mima3 = super()._query_min_max_size()
-
+                if hori is True:
+                    mima1[0] += mima2[0]
+                    mima1[1] += mima2[1]
+                    mima1[2] = max(mima1[2], mima2[2])
+                    mima1[3] = min(mima1[3], mima2[3])
+                else:
+                    mima1[0] = max(mima1[0], mima2[0])
+                    mima1[1] = min(mima1[1], mima2[1])
+                    mima1[2] += mima2[2]
+                    mima1[3] += mima2[3]
+        
+        # Set unset max sizes
+        if mima1[1] == 0:
+            mima1[1] = 1e9
+        if mima1[3] == 0:
+            mima1[3] = 1e9
+        
+        # Add padding and spacing
+        if self.minsize_from_children:
+            extra_padding = self.padding * 2
+            extra_spacing = self.spacing * (len(self.children) - 1)
+            for i in range(4):
+                mima1[i] += extra_padding
+            if hori is True:
+                mima1[0] += extra_spacing
+                mima1[1] += extra_spacing
+            else:
+                mima1[2] += extra_spacing
+                mima1[3] += extra_spacing
+        
         # Combine own limits with limits of children
-        return [max(mima1[0], mima3[0]),
-                min(mima1[1], mima3[1]),
-                max(mima1[2], mima3[2]),
-                min(mima1[3], mima3[3])]
+        return [max(mima1[0], mima0[0]),
+                min(mima1[1], mima0[1]),
+                max(mima1[2], mima0[2]),
+                min(mima1[3], mima0[3])]
 
     @event.reaction('size', '_size_limits', mode='greedy')
     def __size_changed(self, *events):

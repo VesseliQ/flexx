@@ -25,7 +25,7 @@ from io import BytesIO
 logger = logging.getLogger(__name__)
 
 
-VERSION = 2, 1, 0
+VERSION = 2, 2, 1
 __version__ = '.'.join(str(i) for i in VERSION)
 
 
@@ -194,7 +194,7 @@ class BsdfLiteSerializer(object):
         elif isinstance(value, dict):
             f.write(x(b'm', ext_id) + lencode(len(value)))  # M for mapping
             for key, v in value.items():
-                assert key.isidentifier()
+                assert isinstance(key, str)
                 name_b = key.encode('UTF-8')
                 f.write(lencode(len(name_b)))
                 f.write(name_b)
@@ -206,9 +206,9 @@ class BsdfLiteSerializer(object):
             if compression == 0:
                 compressed = value
             elif compression == 1:
-                compressed = zlib.compress(value)
+                compressed = zlib.compress(value, 9)
             elif compression == 2:
-                compressed = bz2.compress(value)
+                compressed = bz2.compress(value, 9)
             else:
                 assert False, 'Unknown compression identifier'
             # Get sizes
@@ -241,6 +241,22 @@ class BsdfLiteSerializer(object):
             # The actual data and extra space
             f.write(compressed)
             f.write(b'\x00' * (allocated_size - used_size))
+        elif getattr(value, "shape", None) == () and str(
+            getattr(value, "dtype", "")
+        ).startswith(("uint", "int", "float")):
+            # Implicit conversion of numpy scalars
+            if 'int' in str(value.dtype):
+                value = int(value)
+                if -32768 <= value <= 32767:
+                    f.write(x(b'h', ext_id) + spack('h', value))
+                else:
+                    f.write(x(b'i', ext_id) + spack('<q', value))
+            else:
+                value = float(value)
+                if self._float64:
+                    f.write(x(b'd', ext_id) + spack('<d', value))
+                else:
+                    f.write(x(b'f', ext_id) + spack('<f', value))
         else:
             if ext_id is not None:
                 raise ValueError(
@@ -409,11 +425,11 @@ class BsdfLiteSerializer(object):
         if major_version != VERSION[0]:  # major version should be 2
             t = ('Reading file with different major version (%s) '
                  'from the implementation (%s).')
-            raise RuntimeError(t % (__version__, file_version))
+            raise RuntimeError(t % (file_version, __version__))
         if minor_version > VERSION[1]:  # minor should be < ours
             t = ('BSDF warning: reading file with higher minor version (%s) '
                  'than the implementation (%s).')
-            logger.warn(t % (__version__, file_version))
+            logger.warn(t % (file_version, __version__))
 
         return self._decode(f)
 
