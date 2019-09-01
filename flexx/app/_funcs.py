@@ -31,7 +31,6 @@ def start():
     associated with the current server.
     """
     server = current_server()
-    logger.info('Starting Flexx event loop.')
     server.start()
 
 
@@ -67,7 +66,6 @@ def _auto_closer(*events):
         if proxies:
             return
     else:
-        logger.info('Stopping Flexx event loop.')
         server.stop()
 
 
@@ -89,14 +87,15 @@ class NoteBookHelper:
         self.enable()
 
     def enable(self):
-        from IPython import get_ipython
+        get_ipython = None
+        exec("from IPython import get_ipython")  # noqa - dont trigger e.g. PyInstaller
         ip = get_ipython()
         ip.events.register('pre_execute', self.capture)
         ip.events.register('post_execute', self.release)
 
     def capture(self):
         if self._real_ws is not None:
-            logger.warn('Notebookhelper already is in capture mode.')
+            logger.warning('Notebookhelper already is in capture mode.')
         else:
             if self._session._ws is None:
                 raise RuntimeError(
@@ -111,7 +110,8 @@ class NoteBookHelper:
             self._session._ws = self._real_ws
         self._real_ws = None
         if self._commands:
-            from IPython.display import display, Javascript
+            display = Javascript = None
+            exec("from IPython.display import display, Javascript")  # noqa - dont trigger e.g. PyInstaller
             lines = []
             lines.append('var bb64 =  flexx.require("bb64");')
             lines.append('function cmd(c) {'
@@ -141,8 +141,8 @@ def init_notebook():
     # Note: not using IPython Comm objects yet, since they seem rather
     # undocumented and I could not get them to work when I tried for a bit.
     # This means though, that flexx in the notebook only works on localhost.
-
-    from IPython.display import display, clear_output, HTML
+    display = clear_output = HTML = None
+    exec("from IPython.display import display, clear_output, HTML")  # noqa - dont trigger e.g. PyInstaller
     # from .. import ui  # noqa - make ui assets available
 
     # Make default log level warning instead of "info" to avoid spamming

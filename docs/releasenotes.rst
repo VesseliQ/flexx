@@ -2,6 +2,41 @@
 Release notes
 -------------
 
+**v0.8.0** (26-04-2019)
+
+* Adds a `PyWidget` class that can be used as a base class for your high-level
+  widgets. Because it is a PyComponent, this makes it much easier to write apps
+  that fully work in Python (desktop-like apps).
+* The ``FormLayout`` uses CSS ``grid`` instead of ``<table>``.
+* A new ``GridLayout`` widget.
+* A new ``MultiLineEdit`` widget.
+* Improvements to docs and guide.
+* Support for freezing Flexx apps to standalone executables (via PyInstaller).
+
+Also see the
+`overview of 0.8 issues and pull request <https://github.com/flexxui/flexx/milestone/13?closed=1>`_
+
+
+**v0.7.1** (03-12-2018)
+
+* Improved shutdown behavior (#533).
+* Small fix in App.export (#532).
+* Fix bahevior when navigating *back* to a Flexx app (#536).
+
+
+**v0.7.0** (02-11-2018)
+
+* New examples for Openlayers and including local assets (by @ocobacho).
+* Tests, demos and readme are included in the sdist, helping packaging on Linux (by @toddrme2178).
+* Some performance tweaks which should help in larger applications.
+* Add ``outernode`` attribute in `TreeItem`` widget, enabling more powerful subclasses.
+* The ``Combobox`` is smarter about the placement of the "dropdown".
+* A new ``RangeSlider`` widget.
+
+Also see the
+`overview of 0.7 issues and pull request <https://github.com/flexxui/flexx/milestone/9?closed=1>`_
+
+
 **v0.6.2** (04-10-2018)
 
 - Bugfix in combobox.
@@ -97,7 +132,7 @@ Also see the
 **v0.3** (15-02-2016)
 
 The most important changes with respect to the previous release are:
-    
+
 - Flexx now works on Legacy Python (i.e. Python 2.7). The source code is
   automatically translated during installation.
 - Improvements to nested FlexLayout on Chrome

@@ -285,7 +285,7 @@ class AppComponentMeta(ComponentMeta):
 
 class BaseAppComponent(Component):
     """ Inherits from :class:`Component <flexx.event.Component>`
-    
+
     Abstract class for Component classes that can be "shared" between
     Python and JavaScript. The concrete implementations are:
 
@@ -411,12 +411,12 @@ class LocalComponent(BaseAppComponent):
     def emit(self, type, info=None):
         # Overload emit() to send events to the proxy object at the other end
         ev = super().emit(type, info)
-        isprop = type in self.__proxy_properties__
         if self._has_proxy is True and self._session.status > 0:
             # implicit: and self._disposed is False:
-            if isprop or type in self.__event_types_at_proxy:
-                self._session.send_command('INVOKE', self._id,
-                                           '_emit_at_proxy', [ev])
+            if type in self.__proxy_properties__:
+                self._session.send_command('INVOKE', self._id, '_emit_at_proxy', [ev])
+            elif type in self.__event_types_at_proxy:
+                self._session.send_command('INVOKE', self._id, '_emit_at_proxy', [ev])
 
     def _dispose(self):
         # Let proxy side know that we no longer exist, and that it should
@@ -462,8 +462,12 @@ class ProxyComponent(BaseAppComponent):
         # Init more
         local_inst = self._comp_init_app_component(property_values)  # pops items
 
-        # Call original method, only set props if this is instantiated "by the local"
+        # Call original method, only set props if this is instantiated "by the local",
+        # except implicit setters (properties who's values are callables).
         props2set = {} if local_inst else property_values
+        for name in list(property_values.keys()):
+            if callable(property_values[name]):
+                props2set[name] = property_values.pop(name)
         super()._comp_init_property_values(props2set)
 
         if this_is_js():
@@ -597,7 +601,7 @@ StubComponent.__jsmodule__ = __name__
 
 class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
     """ Inherits from :class:`BaseAppComponent <flexx.app.BaseAppComponent>`
-    
+
     Base component class that operates in JavaScript, but is accessible
     in Python, where its properties and events can be observed,
     and actions can be invoked.
@@ -625,7 +629,7 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
         when this object is disposed.
         """
         node.addEventListener(type, callback, capture)
-        self._event_listeners.append((node, type, callback, capture))
+        self._event_listeners.push((node, type, callback, capture))
 
     def _dispose(self):
         super()._dispose()
@@ -642,7 +646,7 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
 
 class PyComponent(with_metaclass(AppComponentMeta, LocalComponent)):
     """ Inherits from :class:`BaseAppComponent <flexx.app.BaseAppComponent>`
-    
+
     Base component class that operates in Python, but is accessible
     in JavaScript, where its properties and events can be observed,
     and actions can be invoked.
@@ -689,7 +693,7 @@ class BsdfComponentExtension(bsdf.Extension):
         else:
             c = session.get_component_instance(d['id'])
             if c is None:  # This should probably not happen
-                logger.warn('Using stub component for %s.' % d['id'])
+                logger.warning('Using stub component for %s.' % d['id'])
                 c = StubComponent(session, d['id'])
             else:
                 # Keep it alive for a bit
@@ -715,7 +719,7 @@ class BsdfComponentExtension(bsdf.Extension):
         else:
             c = session.get_component_instance(d['id'])
             if c is None:
-                logger.warn('Using stub component for %s.' % d['id'])
+                logger.warning('Using stub component for %s.' % d['id'])
                 c = StubComponent(session, d['id'])
         return c
 

@@ -1,5 +1,5 @@
 """
-Provides the base ``Widget`` class.
+Provides the base ``Widget`` and ``PyWidget`` classes.
 
 When subclassing a Widget to create a compound widget (i.e. a widget
 that contains other widgets), initialize the child widgets inside the
@@ -35,8 +35,14 @@ layout widgets (like ``HBox``).
                 flx.Button(flex=1, text='foo')
                 flx.Button(flex=2, text='bar')
 
+In the above two examples, the newly created classes subclass from
+``Widget`` and are thus a ``JsComponent`` (i.e. operate in JS). This
+may be what you want if you are aiming for a UI that can be exported
+for the web. If, however, you are developing a desktop application,
+consider subclassing from ``PyWidget`` instead, which will make your
+widget operate in Python.
 
-It is possible to create custom low-level widgets by implementing
+It is also possible to create custom low-level widgets by implementing
 ``_render_dom()``, resulting in a declarative "react-like" (but less
 Pythonic) approach. It returns a virtual DOM that is used to update/replace
 the real browser DOM.
@@ -67,7 +73,7 @@ the real browser DOM.
 
 """
 
-from pscript import undefined, window
+from pscript import undefined, window, RawJS
 
 from ..event import loop
 from .. import event, app
@@ -117,7 +123,8 @@ class Widget(app.JsComponent):
     equal to ``outernode``. For the ``Widget`` class, this is simply a
     `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_
     element. If you don't understand what this is about, don't worry;
-    you won't need it unless you are creating your own low-level widgets :)
+    you won't need it unless you are creating your own low-level widgets.
+    See ``_create_dom()`` for details.
     
     When implementing your own widget class, the class attribute
     ``DEFAULT_MIN_SIZE`` can be set to specify a sensible minimum size.
@@ -321,7 +328,7 @@ class Widget(app.JsComponent):
         # Note that the _comp_init_property_values() will get called first.
 
         # Attach this widget in the widget hierarchy, if we can
-        if parent_given:
+        if parent_given is True:
             self.set_parent(given_parent)
         elif parent is not None:
             self.set_parent(parent)
@@ -396,6 +403,15 @@ class Widget(app.JsComponent):
         values. These attributes must remain unchanged throughout the
         lifetime of a widget. This method can be overloaded in
         subclasses.
+
+        Most widgets have the same value for ``node`` and ``outernode``.
+        However, in some cases it helps to distinguish between the
+        semantic "actual node" and a wrapper. E.g. Flexx uses it to
+        properly layout the ``CanvasWidget`` and ``TreeItem``.
+        Internally, Flexx uses the ``node`` attribute for tab-index, and
+        binding to mouse/touch/scroll/key events. If your ``outernode``
+        already semantically represents your widget, you should probably
+        just use that.
         """
         return create_element('div')
 
@@ -426,9 +442,9 @@ class Widget(app.JsComponent):
         for i in range(len(self.outernode.childNodes)):
             node = self.outernode.childNodes[i]
             if not (node.classList and node.classList.contains('flx-Widget')):
-                nodes.append(node)
+                nodes.push(node)  # push is JS' append
         for widget in self.children:
-            nodes.append(widget.outernode)
+            nodes.push(widget.outernode)
         return nodes
 
     @event.reaction
@@ -441,7 +457,7 @@ class Widget(app.JsComponent):
         elif isinstance(vnode, list):
             vnode = dict(type=self.outernode.nodeName, props={}, children=vnode)
         elif isinstance(vnode, dict):
-            if vnode.type.lower() != self.outernode.nodeName.lower():
+            if vnode.type.toLowerCase() != self.outernode.nodeName.toLowerCase():
                 raise ValueError('Widget._render_dom() must return root node with '
                                  'same element type as outernode.')
         else:
@@ -472,7 +488,7 @@ class Widget(app.JsComponent):
                             'props as dict, not ' + vnode.props)
 
         # Resolve the node itself
-        if node is None or node.nodeName.lower() != vnode.type.lower():
+        if node is None or node.nodeName.toLowerCase() != vnode.type.toLowerCase():
             node = window.document.createElement(vnode.type)
 
         # Resolve props (i.e. attributes)
@@ -766,20 +782,24 @@ class Widget(app.JsComponent):
 
         # Remove ourselves
         if old_parent is not None:
-            children = list(old_parent.children)
-            while self in children:
-                children.remove(self)
+            children = []
+            for i in range(len(old_parent.children)):
+                child = old_parent.children[i]
+                if child is not self:
+                    children.push(child)
             if old_parent is not new_parent:
                 old_parent._mutate_children(children)
 
         # Insert ourselves
         if new_parent is not None:
             if old_parent is not new_parent:
-                children = list(new_parent.children)
-            while self in children:
-                children.remove(self)
+                children = []
+                for i in range(len(new_parent.children)):
+                    child = new_parent.children[i]
+                    if child is not self:
+                        children.push(child)
             if pos is None:
-                children.append(self)
+                children.push(self)
             elif pos >= 0:
                 children.insert(pos, self)
             elif pos < 0:
@@ -787,7 +807,7 @@ class Widget(app.JsComponent):
                 children.insert(pos, self)
                 children.pop(-1)
             else:  # maybe pos is nan for some reason
-                children.append(None)
+                children.push(self)
             new_parent._mutate_children(children)
 
     @event.reaction('container')
@@ -798,6 +818,7 @@ class Widget(app.JsComponent):
             return
 
         # Let session keep us up to date about size changes
+        # (or make it stop if we dont have a container anymore)
         self._session.keep_checking_size_of(self, bool(id))
 
         if id:
@@ -830,6 +851,8 @@ class Widget(app.JsComponent):
         return event_types
 
     def _init_events(self):
+        # TODO: we listen to a lot of events which is unncessary in a lot of cases.
+        # Maybe make it possible (with a class attribute?) to configure this
         # Connect some standard events
         self._addEventListener(self.node, 'wheel', self.pointer_wheel, 0)
         self._addEventListener(self.node, 'keydown', self.key_down, 0)
@@ -1027,7 +1050,9 @@ class Widget(app.JsComponent):
             page_pos = e.pageX, e.pageY
             # Fix buttons
             if e.buttons:
-                buttons_mask = reversed([c for c in e.buttons.toString(2)]).join('')
+                buttons_mask = RawJS(
+                    "e.buttons.toString(2).split('').reverse().join('')"
+                )
             else:
                 # libjavascriptcoregtk-3.0-0  version 2.4.11-1 does not define
                 # e.buttons
@@ -1038,7 +1063,7 @@ class Widget(app.JsComponent):
 
         # note: our button has a value as in JS "which"
         modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
-                        if e[n.lower()+'Key']]
+                        if e[n.toLowerCase() + 'Key']]
         # Create event dict
         return dict(pos=pos, page_pos=page_pos, touches=touches,
                     button=button, buttons=buttons,
@@ -1093,16 +1118,77 @@ class Widget(app.JsComponent):
         # key: chrome 51, ff 23, ie 9
         # code: chrome ok, ff 32, ie no
         modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
-                        if e[n.lower()+'Key']]
+                        if e[n.toLowerCase() + 'Key']]
         key = e.key
         if not key and e.code:  # Chrome < v51
             key = e.code
             if key.startswith('Key'):
                 key = key[3:]
                 if 'Shift' not in modifiers:
-                    key = key.lower()
+                    key = key.toLowerCase()
             elif key.startswith('Digit'):
                 key = key[5:]
         # todo: handle Safari and older browsers via keyCode
         key = {'Esc': 'Escape', 'Del': 'Delete'}.get(key, key)  # IE
         return dict(key=key, modifiers=modifiers)
+
+
+class PyWidget(app.PyComponent):
+    """ A base class that can be used to create compound widgets that
+    operate in Python. This enables an approach for building GUI's in
+    a Pythonic way: by only *using* JS components (actual widgets) all
+    code that you *write* can be Python code.
+
+    Internally, objects of this class create a sub-widget (a
+    ``flx.Widget`` instance). When the object is used as a context
+    manager, the sub-widget will also become active. Further, this class
+    gets attributes for all the sub-widget's properties, actions, and
+    emitters. In effect, this class can be used like a normal
+    ``flx.Widget`` (but in Python).
+    """
+
+    _WidgetCls = Widget
+
+    def __init__(self, *args, **kwargs):
+        self._jswidget = None
+        super().__init__(*args, **kwargs)
+
+    def _comp_init_property_values(self, property_values):
+        # This is a good place to hook up our sub-widget. It gets called
+        # when this is the active component, and after the original
+        # version of this has been called, everything related to session
+        # etc. will work fine.
+
+        # First extract the kwargs
+        kwargs_for_real_widget = {}
+        for name in list(property_values.keys()):
+            if name not in self.__properties__:
+                if name in self._WidgetCls.__properties__:
+                    kwargs_for_real_widget[name] = property_values.pop(name)
+        # Call original version, sets _session, amongst other things
+        super()._comp_init_property_values(property_values)
+        # Create widget and activate it
+        w = self._WidgetCls(**kwargs_for_real_widget)
+        self.__exit__(None, None, None)
+        self._jswidget = w
+        self.__enter__()
+        # Copy all properties, actions and emitters
+        for x in w.__properties__ + w.__actions__ + w.__emitters__:
+            if not hasattr(self, x):
+                setattr(self, x, getattr(w, x))
+        # Handle implicit actions from settable properties
+        for x in w.__properties__:
+            x = "set_" + x
+            if hasattr(w, x) and not hasattr(self, x):
+                setattr(self, x, getattr(w, x))
+
+    def __enter__(self):
+        res = super().__enter__()
+        if self._jswidget is not None:
+            self._jswidget.__enter__()
+        return res
+
+    def __exit__(self, *args, **kwargs):
+        if self._jswidget is not None:
+            self._jswidget.__exit__(None, None, None)
+        return super().__exit__(*args, **kwargs)

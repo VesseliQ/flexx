@@ -89,9 +89,10 @@ $Logger.debug = function (msg) {
 $Logger.info = function (msg) {
     if (this.level <= 20) { console.info(msg); }
 };
-$Logger.warn = function (msg) {
+$Logger.warning = function (msg) {
     if (this.level <= 30) { console.warn(msg); }
 };
+$Logger.warn = $Logger.warning;
 $Logger.exception = function (msg) {
     console.error(msg);
 };
@@ -269,7 +270,7 @@ class ComponentJS:  # pragma: no cover
             if loop.can_mutate(self) is True:
                 res = action_func.apply(self, arguments)
                 if res is not None:
-                    logger.warn('Action (%s) is not supposed to return a value' % name)
+                    logger.warning('Action (%s) should not return a value' % name)
             else:
                 loop.add_action_invokation(action, arguments)
             return self
@@ -551,7 +552,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             # Static simple (json serializable) attributes, e.g. __actions__ etc.
             try:
                 serialized = json.dumps(val)
-            except Exception as err:  # pragma: no cover
+            except Exception as err:  # noqa flake wtf - pragma: no cover
                 raise ValueError('Attributes on JS Component class must be '
                                  'JSON compatible.\n%s' % str(err))
             const_code.append(prototype_prefix + name + ' = ' + serialized)

@@ -388,12 +388,12 @@ class Component(with_metaclass(ComponentMeta, object)):
                 pass
             elif type.startswith('mouse_'):
                 t = 'The event "{}" has been renamed to "pointer{}".'
-                logger.warn(t.format(type, type[5:]))
+                logger.warning(t.format(type, type[5:]))
             else:  # ! means force
                 msg = ('Event type "{type}" does not exist on component {id}. ' +
                        'Use "!{type}" or "!xx.yy.{type}" to suppress this warning.')
                 msg = msg.replace('{type}', type).replace('{id}', self._id)
-                logger.warn(msg)
+                logger.warning(msg)
 
         # Insert reaction in good place (if not already in there) - sort as we add
         comp1 = label + '-' + reaction._id
@@ -463,7 +463,7 @@ class Component(with_metaclass(ComponentMeta, object)):
                 label, reaction = reactions[i]
                 if label.startswith('reconnect_'):
                     if getattr(ev, 'allow_reconnect', True) is True:
-                        index = int(label.split('_')[-1])
+                        index = int(label.split('_')[1])
                         reaction.reconnect(index)
                 else:
                     loop.add_reaction_event(reaction, ev)
