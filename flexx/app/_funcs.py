@@ -144,7 +144,7 @@ def init_notebook():
     # This means though, that flexx in the notebook only works on localhost.
     ldict = {}
     exec("from IPython.display import display, clear_output, HTML", globals(), ldict)  # noqa - dont trigger e.g. PyInstaller
-    display, clear_output, HTML  = ldict['display'], ldict['clear_output'], ldict['HTML']
+    display, clear_output, HTML = ldict['display'], ldict['clear_output'], ldict['HTML']
     # from .. import ui  # noqa - make ui assets available
 
     # Make default log level warning instead of "info" to avoid spamming

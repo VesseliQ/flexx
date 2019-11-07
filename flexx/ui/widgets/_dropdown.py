@@ -324,6 +324,22 @@ class ComboBox(BaseDropdown):
             self.selected_key('')  # also changes text
         else:
             pass  # no selection, leave text alone
+
+    def _deselect(self):
+        self._mutate('selected_index', -1)
+        self._mutate('selected_key', '')
+        if not self.editable:
+            self.set_text('')
+
+    @event.action
+    def update_selected_index(self, text):
+        for index, option in enumerate(self.options):
+            if option[1] == text:
+                self._mutate('selected_index', index)
+                self._mutate('selected_key', option[0])
+                return
+        # else
+        self._deselect()
     
     @event.action
     def set_selected_index(self, index):
@@ -335,17 +351,13 @@ class ComboBox(BaseDropdown):
             self._mutate('selected_key', key)
             self.set_text(text)
         else:
-            self._mutate('selected_index', -1)
-            self._mutate('selected_key', '')
-            self.set_text('')
+            self._deselect()
     
     @event.action
     def set_selected_key(self, key):
         if key == self.selected_key:
             return
         elif key:
-            if key == self.selected_key:
-                return  # eraly exit
             for index, option in enumerate(self.options):
                 if option[0] == key:
                     self._mutate('selected_index', index)
@@ -353,9 +365,7 @@ class ComboBox(BaseDropdown):
                     self.set_text(option[1])
                     return
         # else
-        self._mutate('selected_index', -1)
-        self._mutate('selected_key', '')
-        self.set_text('')
+        self._deselect()
     
     @event.emitter
     def user_selected(self, index):
@@ -470,9 +480,7 @@ class ComboBox(BaseDropdown):
 
     def _submit_text(self):
         super()._submit_text()
-        # todo: should this select option if text happens to match it?
-        self.set_selected_index(-1)
-        self.set_selected_key('')
+        self.update_selected_index(self.text)
 
 
 class DropdownContainer(BaseDropdown):
