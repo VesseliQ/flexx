@@ -8,7 +8,7 @@ import sys
 import time
 import weakref
 import zipfile
-from base64 import encodestring as encodebytes
+import base64
 
 import webruntime
 
@@ -66,7 +66,7 @@ class App:
             # Set icon as base64 str; exported apps can still be standalone
             fname = os.path.abspath(os.path.join(__file__, '..', '..',
                                                     'resources', 'flexx.ico'))
-            icon_str = encodebytes(open(fname, 'rb').read()).decode()
+            icon_str = base64.encodebytes(open(fname, 'rb').read()).decode()
             self.kwargs['icon'] = 'data:image/ico;base64,' + icon_str
 
     def __call__(self, *args, **kwargs):
